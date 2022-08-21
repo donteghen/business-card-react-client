@@ -6,7 +6,7 @@ const baseUrl = process.env.REACT_APP_API_BASE_URL
 // create a new delivery 
 export const createDelivery = async (detail) => {
     try {
-        const res = await axios.get(`${baseUrl}delivery`, detail)
+        const res = await axios.post(`${baseUrl}delivery`, detail)
         return {
             ok : true,
             data : res.data.data

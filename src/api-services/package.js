@@ -5,7 +5,7 @@ const baseUrl = process.env.REACT_APP_API_BASE_URL
 // create a new package 
 export const createPackage = async (detail) => {
     try {
-        const res = await axios.get(`${baseUrl}package`, detail)
+        const res = await axios.post(`${baseUrl}package`, detail)
         return {
             ok : true,
             data : res.data.data

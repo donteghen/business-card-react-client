@@ -8,7 +8,7 @@ import Maper from "../components/Maper";
 import PackageDetail from "../components/PackageDetail";
 
 const Container = styled.div`
-    height: 100vh;
+    height: 100%;
     background:#b1e1b1;
     padding: 50px 100px;
     @media (max-width: 480px) {
@@ -44,7 +44,7 @@ const Button = styled.button`
     @media (max-width: 480px) {
         width: 100%;
     } 
-`
+`;
 const Input = styled.input`
     padding: 12px 10px;
     width: 60%;
@@ -66,6 +66,7 @@ export default function Webtracker () {
         }
         setLoading(true)
         getSinglePackage(packageId).then(result => {
+            setLoading(false)
             if (!result.ok) {
                 window.alert(`Package fetch error: ${result.errorMessage}`)
                 setPackageId('')
@@ -74,7 +75,6 @@ export default function Webtracker () {
             setPackag(result.data)
             getRelatedDelivery(result.data?.active_delivery_id)
             setPackageId('')
-            setLoading(false)
           })
     }
 
