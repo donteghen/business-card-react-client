@@ -1,4 +1,4 @@
-import { useState} from "react";
+import { useState, useEffect} from "react";
 import styled from "styled-components"
 import { getSingleDelivery } from "../api-services/delivery";
 import { getSinglePackage } from "../api-services/package";
@@ -6,6 +6,9 @@ import DeliveryDetail from "../components/DeliveryDetail";
 import Loader from "../components/Loader";
 import Maper from "../components/Maper";
 import PackageDetail from "../components/PackageDetail";
+import {io} from 'socket.io-client'
+
+const socket = io('http://localhost:8080')
 
 const Container = styled.div`
     height: 100%;
@@ -60,6 +63,35 @@ export default function Webtracker () {
     const [packag, setPackag] = useState({})
     const [relatedDelivery, setRelatedDelivery] = useState({})
 
+    const [isConnected, setIsConnected] = useState(false)
+
+    useEffect(() => {
+        socket.on('connect', (data) => {
+          setIsConnected(true)
+        })
+        
+        socket.on('PING', (data) => {
+          console.log(data)
+        })
+  
+        socket.on('disconnect', (data) => {
+          console.log('web-tracker disconnected')
+          setIsConnected(false)
+        })
+
+        socket.on('DELIVERY_UPDATE', (data) => {
+            // console.log(data)
+            setRelatedDelivery(data.delivery)
+        })
+  
+        return () => {
+          socket.off('connect');
+          socket.off('disconnect');
+          socket.off('PING');
+          socket.off('DELIVERY_UPDATE')
+        }
+      }, [])
+
     const handleTrack = () => {
         if (!packageId) {
             return
@@ -73,7 +105,9 @@ export default function Webtracker () {
                 return
             }
             setPackag(result.data)
-            getRelatedDelivery(result.data?.active_delivery_id)
+            if (result.data?.active_delivery_id) {
+                getRelatedDelivery(result.data?.active_delivery_id)
+            }
             setPackageId('')
           })
     }
@@ -100,8 +134,8 @@ export default function Webtracker () {
                     <PackageDetail _package={packag}/>
                     <DeliveryDetail delivery={relatedDelivery}/>
                 </div>
-                <div style={{width:'50%', border:'1px solid black'}}>
-                    <Maper />
+                <div style={{width:'50%',}}>
+                    {relatedDelivery?._id && <Maper current_location={relatedDelivery?.location} from_location={packag?.from_location} to_location={packag?.to_location} />}
                 </div>
             </Bottomsection>
         </Container>

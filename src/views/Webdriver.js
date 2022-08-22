@@ -6,9 +6,10 @@ import DeliveryDetail from "../components/DeliveryDetail";
 import Loader from "../components/Loader";
 import Maper from "../components/Maper";
 import PackageDetail from "../components/PackageDetail";
-// import { io } from "socket.io-client";
+import { io } from "socket.io-client";
 
-// const socket = io('http://localhost:8080')
+
+const socket = io('http://localhost:8080')
 
 const Container = styled.div`
     height: 100%;
@@ -66,46 +67,77 @@ export default function Webdriver () {
     const [deliveryId, setDeliveryId] = useState('')
     const [delivery, setDelivery] = useState({})
     const [relatedPackage, setRelatedPackage] = useState({})
-    // const [isConnected, setIsConnected] = useState(false)
+    const [isConnected, setIsConnected] = useState(false)
 
-    // useEffect(() => {
-    //   socket.on('connect', (data) => {
-    //     setIsConnected(true)
-    //   })
+    useEffect(() => {
+      socket.on('connect', (data) => {
+        setIsConnected(true)
+      })
       
-    //   socket.on('PING', (data) => {
-    //     setIsConnected(true)
-    //   })
+      socket.on('PING', (data) => {
+        console.log(data)
+      })
 
-    //   socket.on('disconnect', (data) => {
-    //     setIsConnected(false)
-    //   })
-      
-    //   return () => {
-    //     socket.off('connect');
-    //     socket.off('disconnect');
-    //     socket.off('PING');
-    //   }
-    // }, [])
+      socket.on('disconnect', (data) => {
+        console.log('web-driver disconnected')
+        setIsConnected(false)
+      })
+        setInterval(() => {
+            handleLocationUpdate()       
+    }, 20000);
 
-    // useEffect(() => {
-    //     socket.on('connect', (data) => {
-    //       setIsConnected(true)
-    //     })
-    //     socket.on('disconnect', (data) => {
-    //       setIsConnected(false)
-    //     })
-    //     socket.on('PING', (data) => {
-    //       setIsConnected(true)
-    //     })
-  
-    //     return () => {
-    //       socket.off('connect');
-    //       socket.off('disconnect');
-    //       socket.off('PING');
-    //     }
-    //   }, [])
-    
+      return () => {
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('PING');
+       
+      }
+    }, [])
+
+    const handleStatusUpdate = (status) => {
+        console.log(status, isConnected)
+        if (!isConnected || !delivery?._id) {
+            return
+        }
+        const payload = {
+            event : 'STATUS_CHANGED',
+            deliveryId : delivery?._id.toString(),
+            status : status
+        }
+        // console.log(payload)
+        socket.emit('STATUS_CHANGED', payload)
+    }
+    const handleLocationUpdate = () => {
+        if (!delivery?._id) {
+            return
+        }
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          };
+
+        function success(pos) {
+          const {latitude, longitude} = pos.coords;    
+          const payload = {
+            event : 'LOCATION_CHANGED',
+            deliveryId : delivery?._id.toString(),
+            location : {
+                lat : latitude,
+                log : longitude
+            }
+          }    
+          // console.log(payload)
+          socket.emit('LOCATION_CHANGED', payload)
+        }
+        
+        function error(err) {
+          window.alert(`Error: code is ${err.code} & message is ${err.messgae}`)
+        }
+        
+        navigator.geolocation.getCurrentPosition(success, error, options);
+    }
+
     const handleTrack = () => {
         if (!deliveryId) {
             return
@@ -133,9 +165,7 @@ export default function Webdriver () {
             setRelatedPackage(result.data)
         })
     }
-    const handleStatusUpdate = (statue) => {
-        return
-    }
+   
     return (
         <Container>
             {loading && <Loader />}
@@ -148,14 +178,14 @@ export default function Webdriver () {
                     <PackageDetail _package={relatedPackage}/>
                     <DeliveryDetail delivery={delivery}/>
                 </div>
-                <div style={{width:'50%', border:'1px solid black'}}>
-                    <Maper />
+                <div style={{width:'50%', }}>
+                {(delivery?._id && relatedPackage?._id) && <Maper current_location={delivery?.location} from_location={relatedPackage?.from_location} to_location={relatedPackage?.to_location} />}
                 </div>
                 <div style={{width:'15%', display:'flex', flexDirection:'column', justifyContent:''}}>
-                    <Button space color="lightblue" onClick={() => handleStatusUpdate('PICKED_UP')}>Picked Up</Button>
-                    <Button space color="orange" onClick={() => handleStatusUpdate('In_TRANSIT')}>In Transit</Button>
-                    <Button space color="green" onClick={() => handleStatusUpdate('DELIVERED')}>Delivered</Button>
-                    <Button space color="red" onClick={() => handleStatusUpdate('FAILED')}>Failed</Button>
+                    <Button disabled={delivery?.status !== 'OPEN'} space color="lightblue" onClick={() => handleStatusUpdate('PICKED_UP')}>Picked Up</Button>
+                    <Button disabled={delivery?.status !== 'PICKED_UP'} space color="orange" onClick={() => handleStatusUpdate('In_TRANSIT')}>In Transit</Button>
+                    <Button disabled={delivery?.status !== 'In_TRANSIT'} space color="green" onClick={() => handleStatusUpdate('DELIVERED')}>Delivered</Button>
+                    <Button disabled={delivery?.status !== 'In_TRANSIT'} space color="red" onClick={() => handleStatusUpdate('FAILED')}>Failed</Button>
                 </div>
             </Bottomsection>
         </Container>
