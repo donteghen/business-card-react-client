@@ -67,11 +67,11 @@ export default function Webdriver () {
     const [deliveryId, setDeliveryId] = useState('')
     const [delivery, setDelivery] = useState({})
     const [relatedPackage, setRelatedPackage] = useState({})
-    const [isConnected, setIsConnected] = useState(false)
+    // const [isConnected, setIsConnected] = useState(false)
 
     useEffect(() => {
-      socket.on('connect', (data) => {
-        setIsConnected(true)
+      socket.on('connect', () => {
+        console.log('web-driver connected')
       })
       
       socket.on('PING', (data) => {
@@ -80,7 +80,7 @@ export default function Webdriver () {
 
       socket.on('disconnect', (data) => {
         console.log('web-driver disconnected')
-        setIsConnected(false)
+        
       })
         setInterval(() => {
             handleLocationUpdate()       
@@ -95,8 +95,9 @@ export default function Webdriver () {
     }, [])
 
     const handleStatusUpdate = (status) => {
-        console.log(status, isConnected)
-        if (!isConnected || !delivery?._id) {
+        console.log(status, socket.connected)
+        socket.connect()
+        if (!socket.connected || !delivery?._id) {
             return
         }
         const payload = {
@@ -106,8 +107,10 @@ export default function Webdriver () {
         }
         // console.log(payload)
         socket.emit('STATUS_CHANGED', payload)
+        reloadDelivery()
     }
     const handleLocationUpdate = () => {
+        console.log(delivery?._id, 'sending')
         if (!delivery?._id) {
             return
         }
@@ -129,6 +132,7 @@ export default function Webdriver () {
           }    
           // console.log(payload)
           socket.emit('LOCATION_CHANGED', payload)
+          reloadDelivery()
         }
         
         function error(err) {
@@ -155,7 +159,16 @@ export default function Webdriver () {
             setLoading(false)
           })
     }
-
+    const reloadDelivery = () => {
+        getSingleDelivery(delivery?._id).then(result => {
+            if (!result.ok) {
+                window.alert(`Delivery fetch error: ${result.errorMessage}`)
+                setDeliveryId('')
+                return
+            }
+            setDelivery(result.data)
+          })
+    }
     const getRelatedPackage = (packageId) => {
         getSinglePackage(packageId).then(result => {
             if (!result.ok) {

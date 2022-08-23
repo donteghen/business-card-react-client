@@ -63,11 +63,10 @@ export default function Webtracker () {
     const [packag, setPackag] = useState({})
     const [relatedDelivery, setRelatedDelivery] = useState({})
 
-    const [isConnected, setIsConnected] = useState(false)
 
     useEffect(() => {
         socket.on('connect', (data) => {
-          setIsConnected(true)
+          console.log('web-tracker connected')
         })
         
         socket.on('PING', (data) => {
@@ -76,12 +75,15 @@ export default function Webtracker () {
   
         socket.on('disconnect', (data) => {
           console.log('web-tracker disconnected')
-          setIsConnected(false)
         })
 
         socket.on('DELIVERY_UPDATE', (data) => {
-            // console.log(data)
-            setRelatedDelivery(data.delivery)
+            console.log(relatedDelivery)
+            console.log(data?.delivery?._id === relatedDelivery?._id, data?.delivery?._id, relatedDelivery?._id)
+            // check to make sure the in-coming delivery object is the package's relatedDelivery before updating the map
+            if (data?.delivery?._id === relatedDelivery?._id) {
+                setRelatedDelivery(data.delivery)
+            }           
         })
   
         return () => {
