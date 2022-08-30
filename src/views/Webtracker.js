@@ -92,7 +92,10 @@ export default function Webtracker () {
           socket.off('PING');
           socket.off('DELIVERY_UPDATE')
         }
-      }, [])
+      }, [relatedDelivery, packag, packageId])
+      useEffect(() => {
+        console.log(relatedDelivery)
+      }, [relatedDelivery])
 
     const handleTrack = () => {
         if (!packageId) {
@@ -103,14 +106,12 @@ export default function Webtracker () {
             setLoading(false)
             if (!result.ok) {
                 window.alert(`Package fetch error: ${result.errorMessage}`)
-                setPackageId('')
                 return
             }
             setPackag(result.data)
             if (result.data?.active_delivery_id) {
                 getRelatedDelivery(result.data?.active_delivery_id)
             }
-            setPackageId('')
           })
     }
 

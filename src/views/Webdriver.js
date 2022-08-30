@@ -1,4 +1,4 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect, useRef} from "react";
 import styled from "styled-components"
 import { getSingleDelivery } from "../api-services/delivery";
 import { getSinglePackage } from "../api-services/package";
@@ -65,8 +65,9 @@ export default function Webdriver () {
 
     const [loading, setLoading] = useState(false)
     const [deliveryId, setDeliveryId] = useState('')
-    const [delivery, setDelivery] = useState({})
-    const [relatedPackage, setRelatedPackage] = useState({})
+    const [delivery, setDelivery] = useState()
+    const [relatedPackage, setRelatedPackage] = useState()
+    let tick = useRef()
     // const [isConnected, setIsConnected] = useState(false)
 
     useEffect(() => {
@@ -82,21 +83,23 @@ export default function Webdriver () {
         console.log('web-driver disconnected')
         
       })
-        setInterval(() => {
-            handleLocationUpdate()       
-    }, 20000);
+      
+      tick.current = setInterval(() => {
+        handleLocationUpdate()       
+      }, 20000);
 
       return () => {
         socket.off('connect');
         socket.off('disconnect');
         socket.off('PING');
-       
+        clearInterval(tick.current)
       }
-    }, [])
+    }, [delivery, deliveryId])
+
+    
 
     const handleStatusUpdate = (status) => {
-        console.log(status, socket.connected)
-        socket.connect()
+        
         if (!socket.connected || !delivery?._id) {
             return
         }
@@ -109,9 +112,10 @@ export default function Webdriver () {
         socket.emit('STATUS_CHANGED', payload)
         reloadDelivery()
     }
+
     const handleLocationUpdate = () => {
-        console.log(delivery?._id, 'sending')
-        if (!delivery?._id) {
+        // console.log(delivery?._id, 'sending', delivery, deliveryId)
+        if (!deliveryId) {
             return
         }
         const options = {
@@ -124,7 +128,7 @@ export default function Webdriver () {
           const {latitude, longitude} = pos.coords;    
           const payload = {
             event : 'LOCATION_CHANGED',
-            deliveryId : delivery?._id.toString(),
+            deliveryId : delivery?._id?.toString(),
             location : {
                 lat : latitude,
                 log : longitude
@@ -150,24 +154,24 @@ export default function Webdriver () {
         getSingleDelivery(deliveryId).then(result => {
             if (!result.ok) {
                 window.alert(`Delivery fetch error: ${result.errorMessage}`)
-                setDeliveryId('')
                 return
             }
             setDelivery(result.data)
             getRelatedPackage(result.data?.package_id)
-            setDeliveryId('')
             setLoading(false)
           })
+
+          
     }
     const reloadDelivery = () => {
-        getSingleDelivery(delivery?._id).then(result => {
+        getSingleDelivery(deliveryId).then(result => {
             if (!result.ok) {
                 window.alert(`Delivery fetch error: ${result.errorMessage}`)
-                setDeliveryId('')
                 return
             }
             setDelivery(result.data)
           })
+
     }
     const getRelatedPackage = (packageId) => {
         getSinglePackage(packageId).then(result => {
